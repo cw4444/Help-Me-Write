@@ -10,6 +10,12 @@ Local-friendly writing assistant for collaboration, editing, character memory, a
    `npm run dev`
 3. Open the local URL Next.js prints.
 
+If you are on Ubuntu and want the tiny helper script instead:
+
+```bash
+bash scripts/bootstrap-and-run.sh
+```
+
 ## What it does
 
 - Collaboration mode: AI continues the story from your draft
@@ -23,3 +29,9 @@ Local-friendly writing assistant for collaboration, editing, character memory, a
 
 - Your API key is stored locally in the browser and sent to the local Next.js server only when you generate text.
 - Supported providers: OpenAI and Anthropic.
+
+To commit and push from Ubuntu:
+
+```bash
+bash scripts/push.sh "Your commit message"
+```
