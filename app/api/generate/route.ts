@@ -41,7 +41,9 @@ export async function POST(req: Request) {
     `Writer profile: ${writer?.name || "anonymous"} | tone: ${writer?.tone || ""} | house style: ${writer?.houseStyle || ""}`,
     `Spice level: ${spice}/5. Keep within platform-safe content; do not become explicit if the request pushes too far.`,
     `Content mode: ${contentMode || "fade_to_black"}. ${modeGuidance}`,
+    `Adult interactions must be clearly consensual, voluntary, and between adults.`,
     `Adult and erotic content is allowed only when it stays within applicable policy and law. Never generate illegal sexual content, sexual content involving minors, coercion, exploitation, incest, or non-consensual sexual content.`,
+    `If a scene approaches a restricted area, steer away gently or fade out rather than hard erroring or dwelling on the boundary.`,
     `Character to preserve: ${JSON.stringify(character ?? {})}`,
   ].join("\n");
   const user = mode === "collaborate"
