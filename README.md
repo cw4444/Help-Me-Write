@@ -2,6 +2,10 @@
 
 Local-friendly writing assistant for collaboration, editing, character memory, and style control.
 
+## Credits
+
+Built collaboratively with AI assistance. See [CREDITS.md](./CREDITS.md) for the plain-English version.
+
 ## Run locally
 
 1. Install dependencies:
