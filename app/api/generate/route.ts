@@ -27,11 +27,20 @@ async function streamAnthropic(apiKey: string, model: string, prompt: string) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { provider, apiKey, model, mode, story, prompt, spice, writer, character } = body;
+  const { provider, apiKey, model, mode, story, prompt, spice, contentMode, writer, character } = body;
+  const modeGuidance =
+    contentMode === "spicy"
+      ? "The writer wants a spicy tone, but still keep everything within platform-safe and legal limits. No explicit sexual content if policy would disallow it."
+      : contentMode === "romance"
+        ? "The writer wants a romantic tone. Keep intimacy light, tender, and non-explicit."
+        : contentMode === "closed_door"
+          ? "Keep romantic intimacy implied off-page; no explicit detail."
+          : "Use a fade-to-black style for intimacy and keep the scene tasteful and non-explicit.";
   const system = [
     `You are a writing assistant.`,
     `Writer profile: ${writer?.name || "anonymous"} | tone: ${writer?.tone || ""} | house style: ${writer?.houseStyle || ""}`,
     `Spice level: ${spice}/5. Keep within platform-safe content; do not become explicit if the request pushes too far.`,
+    `Content mode: ${contentMode || "fade_to_black"}. ${modeGuidance}`,
     `Adult and erotic content is allowed only when it stays within applicable policy and law. Never generate illegal sexual content, sexual content involving minors, coercion, exploitation, incest, or non-consensual sexual content.`,
     `Character to preserve: ${JSON.stringify(character ?? {})}`,
   ].join("\n");

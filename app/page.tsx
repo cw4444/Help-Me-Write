@@ -30,6 +30,7 @@ const defaultState: ProjectState = {
     tone: "Warm, observant, and slightly witty.",
     houseStyle: "Prefer vivid detail, concrete verbs, and clean dialogue.",
     spice: 3,
+    contentMode: "fade_to_black",
   },
   mode: "collaborate",
   story: "The rain hit the station roof like a handful of thrown coins.\n\n",
@@ -461,7 +462,7 @@ export default function Page() {
           )
           .join("\n")
       : "- none";
-    const md = `---\nprovider: ${state.settings.provider}\nmodel: ${state.settings.model}\nwriterName: ${state.settings.writerName}\ntone: ${JSON.stringify(state.settings.tone)}\nhouseStyle: ${JSON.stringify(state.settings.houseStyle)}\nspice: ${state.settings.spice}\n---\n\n# StorySmith Project\n\n## Story\n${state.story}\n\n## Prompt\n${state.prompt}\n\n## Scratchpad\n${scratchpadMd}\n\n## Characters\n${charMd}\n`;
+    const md = `---\nprovider: ${state.settings.provider}\nmodel: ${state.settings.model}\nwriterName: ${state.settings.writerName}\ntone: ${JSON.stringify(state.settings.tone)}\nhouseStyle: ${JSON.stringify(state.settings.houseStyle)}\nspice: ${state.settings.spice}\ncontentMode: ${state.settings.contentMode}\n---\n\n# StorySmith Project\n\n## Story\n${state.story}\n\n## Prompt\n${state.prompt}\n\n## Scratchpad\n${scratchpadMd}\n\n## Characters\n${charMd}\n`;
     const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -504,6 +505,9 @@ export default function Page() {
             break;
           case "spice":
             next.settings.spice = Number(value) || next.settings.spice;
+            break;
+          case "contentMode":
+            if (["romance", "spicy", "fade_to_black", "closed_door"].includes(value)) next.settings.contentMode = value as Settings["contentMode"];
             break;
         }
       }
@@ -657,6 +661,7 @@ export default function Page() {
       provider: state.settings.provider,
       apiKey: state.settings.apiKey,
       model: state.settings.model,
+      contentMode: state.settings.contentMode,
       mode: state.mode,
       story: state.story,
       prompt: state.prompt,
@@ -1096,6 +1101,21 @@ export default function Page() {
                 <div className="field">
                   <label>Spice: {state.settings.spice}/5</label>
                   <input className="spicy" type="range" min="1" max="5" value={state.settings.spice} onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, spice: Number(e.target.value) } }))} />
+                </div>
+              </div>
+              <div className="field">
+                <label>Content mode</label>
+                <select
+                  value={state.settings.contentMode}
+                  onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, contentMode: e.target.value as Settings["contentMode"] } }))}
+                >
+                  <option value="fade_to_black">Fade to black</option>
+                  <option value="closed_door">Closed door</option>
+                  <option value="romance">Romance</option>
+                  <option value="spicy">Spicy</option>
+                </select>
+                <div className="small" style={{ marginTop: 6 }}>
+                  Use this to keep the tone where you want it, while the app still blocks illegal or non-consensual content.
                 </div>
               </div>
               <div className="field">
