@@ -36,4 +36,5 @@ export type Settings = {
   spice: number;
   contentMode: "romance" | "spicy" | "fade_to_black" | "closed_door";
   startMode: "balanced" | "suggestive" | "explicit" | "dialogue_heavy" | "slow_burn";
+  sceneStyle: "balanced" | "lush_prose" | "fast_banter" | "action_first";
 };

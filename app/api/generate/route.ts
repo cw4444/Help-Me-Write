@@ -27,7 +27,7 @@ async function streamAnthropic(apiKey: string, model: string, prompt: string) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { provider, apiKey, model, mode, story, prompt, spice, contentMode, startMode, writer, character } = body;
+  const { provider, apiKey, model, mode, story, prompt, spice, contentMode, startMode, sceneStyle, writer, character } = body;
   const modeGuidance =
     contentMode === "spicy"
       ? "The writer wants a spicy tone, but still keep everything within platform-safe and legal limits. No explicit sexual content if policy would disallow it."
@@ -55,10 +55,18 @@ export async function POST(req: Request) {
           ? "Open by foregrounding dialogue and character voices."
           : startMode === "slow_burn"
             ? "Open slowly, letting tension accumulate before anything big happens."
-            : "Open in a balanced, flexible way that suits the scene.";
+        : "Open in a balanced, flexible way that suits the scene.";
+  const sceneStyleGuidance =
+    sceneStyle === "lush_prose"
+      ? "Lean into lush sensory detail and immersive description."
+      : sceneStyle === "fast_banter"
+        ? "Keep the pace quick, with crisp back-and-forth dialogue and sharp rhythm."
+        : sceneStyle === "action_first"
+          ? "Prioritise motion, momentum, and clear action beats."
+          : "Use a balanced prose style.";
   const user = mode === "collaborate"
-    ? `Continue the story in a natural way.\n\nOpening mode: ${startMode || "balanced"}. ${startModeGuidance}\n\nStory so far:\n${story}\n\nWriter prompt:\n${prompt}`
-    : `Edit the draft for obvious inconsistencies, wording issues, and typos. Return the improved passage only.\n\nOpening mode: ${startMode || "balanced"}. ${startModeGuidance}\n\nDraft:\n${story}\n\nFocus:\n${prompt}`;
+    ? `Continue the story in a natural way.\n\nOpening mode: ${startMode || "balanced"}. ${startModeGuidance}\nScene style: ${sceneStyle || "balanced"}. ${sceneStyleGuidance}\n\nStory so far:\n${story}\n\nWriter prompt:\n${prompt}`
+    : `Edit the draft for obvious inconsistencies, wording issues, and typos. Return the improved passage only.\n\nOpening mode: ${startMode || "balanced"}. ${startModeGuidance}\nScene style: ${sceneStyle || "balanced"}. ${sceneStyleGuidance}\n\nDraft:\n${story}\n\nFocus:\n${prompt}`;
   const fullPrompt = `${system}\n\n${user}`;
   const upstream = provider === "anthropic"
     ? await streamAnthropic(apiKey, model, fullPrompt)

@@ -32,6 +32,7 @@ const defaultState: ProjectState = {
     spice: 3,
     contentMode: "fade_to_black",
     startMode: "balanced",
+    sceneStyle: "balanced",
   },
   mode: "collaborate",
   story: "The rain hit the station roof like a handful of thrown coins.\n\n",
@@ -472,7 +473,7 @@ export default function Page() {
           )
           .join("\n")
       : "- none";
-    const md = `---\nprovider: ${state.settings.provider}\nmodel: ${state.settings.model}\nwriterName: ${state.settings.writerName}\ntone: ${JSON.stringify(state.settings.tone)}\nhouseStyle: ${JSON.stringify(state.settings.houseStyle)}\nspice: ${state.settings.spice}\ncontentMode: ${state.settings.contentMode}\nstartMode: ${state.settings.startMode}\n---\n\n# StorySmith Project\n\n## Story\n${state.story}\n\n## Prompt\n${state.prompt}\n\n## Scratchpad\n${scratchpadMd}\n\n## Characters\n${charMd}\n`;
+    const md = `---\nprovider: ${state.settings.provider}\nmodel: ${state.settings.model}\nwriterName: ${state.settings.writerName}\ntone: ${JSON.stringify(state.settings.tone)}\nhouseStyle: ${JSON.stringify(state.settings.houseStyle)}\nspice: ${state.settings.spice}\ncontentMode: ${state.settings.contentMode}\nstartMode: ${state.settings.startMode}\nsceneStyle: ${state.settings.sceneStyle}\n---\n\n# StorySmith Project\n\n## Story\n${state.story}\n\n## Prompt\n${state.prompt}\n\n## Scratchpad\n${scratchpadMd}\n\n## Characters\n${charMd}\n`;
     const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -521,6 +522,9 @@ export default function Page() {
             break;
           case "startMode":
             if (["balanced", "suggestive", "explicit", "dialogue_heavy", "slow_burn"].includes(value)) next.settings.startMode = value as Settings["startMode"];
+            break;
+          case "sceneStyle":
+            if (["balanced", "lush_prose", "fast_banter", "action_first"].includes(value)) next.settings.sceneStyle = value as Settings["sceneStyle"];
             break;
         }
       }
@@ -676,6 +680,7 @@ export default function Page() {
       model: state.settings.model,
       contentMode: state.settings.contentMode,
       startMode: state.settings.startMode,
+      sceneStyle: state.settings.sceneStyle,
       mode: state.mode,
       story: state.story,
       prompt: state.prompt,
@@ -766,6 +771,7 @@ export default function Page() {
         ...incoming.settings,
         apiKey: "",
         startMode: (incoming.settings as Partial<Settings> | undefined)?.startMode ?? prev.settings.startMode,
+        sceneStyle: (incoming.settings as Partial<Settings> | undefined)?.sceneStyle ?? prev.settings.sceneStyle,
       },
     }));
   }
@@ -835,7 +841,16 @@ export default function Page() {
     return "balanced";
   }
 
+  function suggestSceneStyle(promptText: string): Settings["sceneStyle"] {
+    const text = promptText.toLowerCase();
+    if (/(fight|chase|battle|escape|gun|sword|explosion|action|pursuit)(?:\b|$)/.test(text)) return "action_first";
+    if (/(banter|witty|snark|back and forth|argument|conversation|dialogue)(?:\b|$)/.test(text)) return "fast_banter";
+    if (/(lush|sensory|atmospheric|moody|immersive|beautiful prose|descriptive)(?:\b|$)/.test(text)) return "lush_prose";
+    return "balanced";
+  }
+
   const suggestedStartMode = suggestStartMode(state.prompt);
+  const suggestedSceneStyle = suggestSceneStyle(state.prompt);
   const suggestedStartModeLabel =
     suggestedStartMode === "dialogue_heavy"
       ? "Dialogue-heavy"
@@ -846,6 +861,14 @@ export default function Page() {
           : suggestedStartMode === "explicit"
             ? "Direct"
             : "Balanced";
+  const suggestedSceneStyleLabel =
+    suggestedSceneStyle === "lush_prose"
+      ? "Lush prose"
+      : suggestedSceneStyle === "fast_banter"
+        ? "Fast banter"
+        : suggestedSceneStyle === "action_first"
+          ? "Action-first"
+          : "Balanced";
 
   const filteredScratchpad = state.scratchpad.filter((item) => {
     const query = scratchpadSearch.trim().toLowerCase();
@@ -943,7 +966,23 @@ export default function Page() {
           ? "More direct energy, while still respecting the selected content limits."
           : state.settings.startMode === "dialogue_heavy"
             ? "Start with character voices and momentum instead of long description."
-            : "Stretch the tension out and let the attraction build slowly.";
+          : "Stretch the tension out and let the attraction build slowly.";
+  const sceneStyleLabel =
+    state.settings.sceneStyle === "lush_prose"
+      ? "Lush prose"
+      : state.settings.sceneStyle === "fast_banter"
+        ? "Fast banter"
+        : state.settings.sceneStyle === "action_first"
+          ? "Action-first"
+          : "Balanced scene style";
+  const sceneStyleHint =
+    state.settings.sceneStyle === "lush_prose"
+      ? "More atmosphere, imagery, and textured detail."
+      : state.settings.sceneStyle === "fast_banter"
+        ? "Tighter, quicker exchanges with a lot of voice."
+        : state.settings.sceneStyle === "action_first"
+          ? "Keep the momentum up and get to the motion fast."
+          : "A flexible default that lets the scene breathe naturally.";
 
   return (
     <main className="shell">
@@ -1046,6 +1085,17 @@ export default function Page() {
             <div className="field">
               <label>{state.mode === "collaborate" ? "What should happen next?" : "What should be checked?"}</label>
               <textarea value={state.prompt} onChange={(e) => setState((p) => ({ ...p, prompt: e.target.value }))} />
+              <div className="chips" style={{ marginTop: 8 }}>
+                <span className="chip" title="Suggested start mode based on the prompt">
+                  Suggested start: {suggestedStartModeLabel}
+                </span>
+                <span className="chip" title="Suggested scene style based on the prompt">
+                  Suggested style: {suggestedSceneStyleLabel}
+                </span>
+              </div>
+              <div className="small" style={{ marginTop: 6 }}>
+                {startModeHint} {sceneStyleHint}
+              </div>
             </div>
             <div className="field">
               <label>Latest AI output</label>
@@ -1222,6 +1272,24 @@ export default function Page() {
                 </div>
                 <div className="small" style={{ marginTop: 6 }}>
                   {startModeHint}
+                </div>
+              </div>
+              <div className="field">
+                <label>Scene style</label>
+                <select
+                  value={state.settings.sceneStyle}
+                  onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, sceneStyle: e.target.value as Settings["sceneStyle"] } }))}
+                >
+                  <option value="balanced">Balanced - flexible and even</option>
+                  <option value="lush_prose">Lush prose - sensory and atmospheric</option>
+                  <option value="fast_banter">Fast banter - quick voices and rhythm</option>
+                  <option value="action_first">Action-first - momentum before description</option>
+                </select>
+                <div className="chip" style={{ marginTop: 8 }}>
+                  {sceneStyleLabel}
+                </div>
+                <div className="small" style={{ marginTop: 6 }}>
+                  {sceneStyleHint}
                 </div>
               </div>
               <div className="field">
