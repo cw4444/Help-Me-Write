@@ -631,7 +631,8 @@ export default function Page() {
               .map((item) => {
                 const [label, targetId] = item.split("->").map((part) => part.trim());
                 return { label: label || "connected", targetId: targetId || "" };
-              });
+              })
+              .filter((link) => link.targetId !== "");
             break;
           case "goals":
             current.goals = value;
@@ -762,7 +763,13 @@ export default function Page() {
 
   async function importProject(file: File) {
     const text = await file.text();
-    const incoming = JSON.parse(text) as Partial<ProjectState>;
+    let incoming: Partial<ProjectState>;
+    try {
+      incoming = JSON.parse(text) as Partial<ProjectState>;
+    } catch {
+      setPopup("Failed to import: file is not valid JSON.");
+      return;
+    }
     setState((prev) => ({
       ...prev,
       ...incoming,

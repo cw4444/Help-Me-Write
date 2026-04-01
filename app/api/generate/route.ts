@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 
 async function streamOpenAI(apiKey: string, model: string, prompt: string) {
-  const res = await fetch("https://api.openai.com/v1/responses", {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, input: prompt, stream: true }),
+    body: JSON.stringify({ model, stream: true, messages: [{ role: "user", content: prompt }] }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error(`OpenAI error ${res.status}:`, errBody);
+    throw new Error(`OpenAI request failed (${res.status})`);
+  }
   return res.body!;
 }
 
@@ -15,13 +19,17 @@ async function streamAnthropic(apiKey: string, model: string, prompt: string) {
     method: "POST",
     headers: {
       "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
+      "anthropic-version": "2024-06-01",
       "content-type": "application/json",
       accept: "text/event-stream",
     },
     body: JSON.stringify({ model, max_tokens: 900, stream: true, messages: [{ role: "user", content: prompt }] }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error(`Anthropic error ${res.status}:`, errBody);
+    throw new Error(`Anthropic request failed (${res.status})`);
+  }
   return res.body!;
 }
 
@@ -100,9 +108,7 @@ export async function POST(req: Request) {
                     ? parsed.type === "content_block_delta"
                       ? parsed.delta?.text ?? ""
                       : ""
-                    : parsed.type === "response.output_text.delta"
-                      ? parsed.delta ?? ""
-                      : "";
+                    : parsed.choices?.[0]?.delta?.content ?? "";
                 } catch {
                   chunk = "";
                 }
