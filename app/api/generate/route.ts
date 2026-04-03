@@ -33,11 +33,27 @@ async function streamAnthropic(apiKey: string, model: string, prompt: string) {
   return res.body!;
 }
 
+async function streamXAI(apiKey: string, model: string, prompt: string) {
+  const res = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, stream: true, messages: [{ role: "user", content: prompt }] }),
+  });
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error(`xAI error ${res.status}:`, errBody);
+    throw new Error(`xAI request failed (${res.status})`);
+  }
+  return res.body!;
+}
+
 export async function POST(req: Request) {
   const body = await req.json();
   const { provider, apiKey, model, mode, story, prompt, spice, contentMode, startMode, sceneStyle, writer, character } = body;
   const modeGuidance =
-    contentMode === "spicy"
+    contentMode === "absolute_filth"
+      ? "The writer selected the highest-intensity mode. Keep it consensual, legal, and non-explicit if policy requires it, but allow a much hotter tone than the standard spicy mode."
+      : contentMode === "spicy"
       ? "The writer wants a spicy tone, but still keep everything within platform-safe and legal limits. No explicit sexual content if policy would disallow it."
       : contentMode === "romance"
         ? "The writer wants a romantic tone. Keep intimacy light, tender, and non-explicit."
@@ -47,7 +63,7 @@ export async function POST(req: Request) {
   const system = [
     `You are a writing assistant.`,
     `Writer profile: ${writer?.name || "anonymous"} | tone: ${writer?.tone || ""} | house style: ${writer?.houseStyle || ""}`,
-    `Spice level: ${spice}/5. Keep within platform-safe content; do not become explicit if the request pushes too far.`,
+    `Spice level: ${spice}${spice >= 6 ? " (extreme)" : ""}. Keep within platform-safe content; do not become explicit if the request pushes too far.`,
     `Content mode: ${contentMode || "fade_to_black"}. ${modeGuidance}`,
     `Adult interactions must be clearly consensual, voluntary, and between adults.`,
     `Adult and erotic content is allowed only when it stays within applicable policy and law. Never generate illegal sexual content, sexual content involving minors, coercion, exploitation, incest, or non-consensual sexual content.`,
@@ -78,6 +94,8 @@ export async function POST(req: Request) {
   const fullPrompt = `${system}\n\n${user}`;
   const upstream = provider === "anthropic"
     ? await streamAnthropic(apiKey, model, fullPrompt)
+    : provider === "xai"
+      ? await streamXAI(apiKey, model, fullPrompt)
     : await streamOpenAI(apiKey, model, fullPrompt);
 
   const reader = upstream.getReader();

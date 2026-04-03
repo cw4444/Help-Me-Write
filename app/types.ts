@@ -1,4 +1,4 @@
-export type Provider = "openai" | "anthropic";
+export type Provider = "openai" | "anthropic" | "xai";
 
 export type Mode = "collaborate" | "edit";
 
@@ -34,7 +34,7 @@ export type Settings = {
   tone: string;
   houseStyle: string;
   spice: number;
-  contentMode: "romance" | "spicy" | "fade_to_black" | "closed_door";
+  contentMode: "romance" | "spicy" | "fade_to_black" | "closed_door" | "absolute_filth";
   startMode: "balanced" | "suggestive" | "explicit" | "dialogue_heavy" | "slow_burn";
   sceneStyle: "balanced" | "lush_prose" | "fast_banter" | "action_first";
 };

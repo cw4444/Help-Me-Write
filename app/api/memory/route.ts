@@ -15,15 +15,16 @@ async function complete(provider: string, apiKey: string, model: string, prompt:
     const data = await res.json();
     return data.content?.map((c: { text?: string }) => c.text ?? "").join("");
   }
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const baseUrl = provider === "xai" ? "https://api.x.ai/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+  const res = await fetch(baseUrl, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }] }),
   });
   if (!res.ok) {
     const errBody = await res.text();
-    console.error(`OpenAI error ${res.status}:`, errBody);
-    throw new Error(`OpenAI request failed (${res.status})`);
+    console.error(`${provider === "xai" ? "xAI" : "OpenAI"} error ${res.status}:`, errBody);
+    throw new Error(`${provider === "xai" ? "xAI" : "OpenAI"} request failed (${res.status})`);
   }
   const data = await res.json();
   return data.choices?.[0]?.message?.content ?? "";

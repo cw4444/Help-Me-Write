@@ -937,7 +937,8 @@ export default function Page() {
     pushTimelineEntry("Story summary", summary.slice(0, 180));
   }
 
-  const spiceLabel = ["Gentle", "Suggestive", "Steamy", "Heat-forward", "Very spicy"][state.settings.spice - 1] ?? "Moderate";
+  const isXaiGrok = state.settings.provider === "xai" && /grok/i.test(state.settings.model.trim());
+  const spiceLabel = ["Gentle", "Suggestive", "Steamy", "Heat-forward", "Very spicy", "Absolute filth"][state.settings.spice - 1] ?? "Moderate";
   const contentModeLabel =
     state.settings.contentMode === "fade_to_black"
       ? "WI-safe / fade to black"
@@ -945,7 +946,9 @@ export default function Page() {
         ? "Closed door / implied off-page"
         : state.settings.contentMode === "romance"
           ? "Romance / light intimacy"
-          : "Spicy / still policy-safe";
+          : state.settings.contentMode === "absolute_filth"
+            ? "Absolute filth / xAI + Grok only"
+            : "Spicy / still policy-safe";
   const contentModeHint =
     state.settings.contentMode === "fade_to_black"
       ? "No on-page explicitness; keep intimacy implied."
@@ -953,7 +956,9 @@ export default function Page() {
         ? "Romance can happen, but the scene closes before details."
         : state.settings.contentMode === "romance"
           ? "Tender and flirty, but not explicit."
-          : "More heat, but still no illegal or non-consensual content.";
+          : state.settings.contentMode === "absolute_filth"
+            ? "Locked to xAI + Grok. It can be very hot, but still no illegal or non-consensual content."
+            : "More heat, but still no illegal or non-consensual content.";
   const startModeLabel =
     state.settings.startMode === "balanced"
       ? "Balanced launch"
@@ -1215,14 +1220,53 @@ export default function Page() {
               <div className="row">
                 <div className="field">
                   <label>Provider</label>
-                  <select value={state.settings.provider} onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, provider: e.target.value as Provider } }))}>
+                  <select
+                    value={state.settings.provider}
+                    onChange={(e) =>
+                      setState((p) => ({
+                        ...p,
+                        settings: {
+                          ...p.settings,
+                          provider: e.target.value as Provider,
+                          contentMode:
+                            e.target.value === "xai" && /grok/i.test(p.settings.model)
+                              ? p.settings.contentMode
+                              : p.settings.contentMode === "absolute_filth"
+                                ? "spicy"
+                                : p.settings.contentMode,
+                          spice: e.target.value === "xai" ? p.settings.spice : Math.min(p.settings.spice, 5),
+                        },
+                      }))
+                    }
+                  >
                     <option value="openai">OpenAI</option>
                     <option value="anthropic">Anthropic</option>
+                    <option value="xai">xAI</option>
                   </select>
                 </div>
                 <div className="field">
                   <label>Model</label>
-                  <input value={state.settings.model} onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, model: e.target.value } }))} />
+                  <input
+                    value={state.settings.model}
+                    onChange={(e) =>
+                      setState((p) => ({
+                        ...p,
+                        settings: {
+                          ...p.settings,
+                          model: e.target.value,
+                          contentMode:
+                            p.settings.provider === "xai" && /grok/i.test(e.target.value)
+                              ? p.settings.contentMode
+                              : p.settings.contentMode === "absolute_filth"
+                                ? "spicy"
+                                : p.settings.contentMode,
+                        },
+                      }))
+                    }
+                  />
+                  <div className="small" style={{ marginTop: 6 }}>
+                    Try <code>grok-4</code> or <code>grok-4.1</code> for xAI. The extra spice tier only appears when xAI + Grok is selected.
+                  </div>
                 </div>
               </div>
               <div className="field">
@@ -1237,20 +1281,39 @@ export default function Page() {
                   <input value={state.settings.writerName} onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, writerName: e.target.value } }))} />
                 </div>
                 <div className="field">
-                  <label>Spice: {state.settings.spice}/5</label>
-                  <input className="spicy" type="range" min="1" max="5" value={state.settings.spice} onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, spice: Number(e.target.value) } }))} />
+                  <label>Spice: {state.settings.spice}/{isXaiGrok ? 6 : 5}</label>
+                  <input
+                    className="spicy"
+                    type="range"
+                    min="1"
+                    max={isXaiGrok ? 6 : 5}
+                    value={Math.min(state.settings.spice, isXaiGrok ? 6 : 5)}
+                    onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, spice: Number(e.target.value) } }))}
+                  />
                 </div>
               </div>
               <div className="field">
                 <label>Content mode</label>
                 <select
                   value={state.settings.contentMode}
-                  onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, contentMode: e.target.value as Settings["contentMode"] } }))}
+                  onChange={(e) =>
+                    setState((p) => ({
+                      ...p,
+                      settings: {
+                        ...p.settings,
+                        contentMode:
+                          e.target.value === "absolute_filth" && !isXaiGrok
+                            ? "spicy"
+                            : (e.target.value as Settings["contentMode"]),
+                      },
+                    }))
+                  }
                 >
                   <option value="fade_to_black">Fade to black - keep it implied</option>
                   <option value="closed_door">Closed door - romance off-page</option>
                   <option value="romance">Romance - tender, light intimacy</option>
                   <option value="spicy">Spicy - more heat, still safe</option>
+                  {isXaiGrok ? <option value="absolute_filth">Absolute filth - xAI + Grok only</option> : null}
                 </select>
                 <div className="small" style={{ marginTop: 6 }}>
                   Use this to keep the tone where you want it, while the app still blocks illegal or non-consensual content.
