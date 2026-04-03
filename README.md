@@ -1,3 +1,5 @@
+Live Demo: https://help-me-write.vercel.app/
+
 # Help Me Write
 
 An AI-powered writing assistant that runs on your own computer. You bring the story — Help Me Write helps you keep writing, tighten your prose, track your characters, and brainstorm ideas without any of it leaving your machine.
