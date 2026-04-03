@@ -4,6 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Character, Mode, Provider, Settings } from "./types";
 
 const STORAGE_KEY = "storysmith:v1";
+const DEFAULT_MODELS: Record<Provider, string> = {
+  openai: "gpt-4.1-mini",
+  anthropic: "claude-3-5-haiku-latest",
+  xai: "grok-3-mini",
+};
 
 type ProjectState = {
   settings: Settings;
@@ -25,7 +30,7 @@ const defaultState: ProjectState = {
   settings: {
     provider: "openai",
     apiKey: "",
-    model: "gpt-4.1-mini",
+    model: DEFAULT_MODELS.openai,
     writerName: "",
     tone: "Warm, observant, and slightly witty.",
     houseStyle: "Prefer vivid detail, concrete verbs, and clean dialogue.",
@@ -678,7 +683,7 @@ export default function Page() {
     const payload = {
       provider: state.settings.provider,
       apiKey: state.settings.apiKey,
-      model: state.settings.model,
+      model: effectiveModel,
       contentMode: state.settings.contentMode,
       startMode: state.settings.startMode,
       sceneStyle: state.settings.sceneStyle,
@@ -741,7 +746,7 @@ export default function Page() {
     const result = await callApi("/api/review", {
       provider: state.settings.provider,
       apiKey: state.settings.apiKey,
-      model: state.settings.model,
+      model: effectiveModel,
       story: state.story,
       character: selectedCharacter,
     });
@@ -902,7 +907,7 @@ export default function Page() {
     const result = await callApi("/api/memory", {
       provider: state.settings.provider,
       apiKey: state.settings.apiKey,
-      model: state.settings.model,
+      model: effectiveModel,
       story: state.story,
       character: selectedCharacter,
     });
@@ -927,7 +932,7 @@ export default function Page() {
     const result = await callApi("/api/review", {
       provider: state.settings.provider,
       apiKey: state.settings.apiKey,
-      model: state.settings.model,
+      model: effectiveModel,
       story: state.story,
       character: selectedCharacter,
     });
@@ -937,7 +942,8 @@ export default function Page() {
     pushTimelineEntry("Story summary", summary.slice(0, 180));
   }
 
-  const isXaiGrok = state.settings.provider === "xai" && /grok/i.test(state.settings.model.trim());
+  const effectiveModel = state.settings.model.trim() || DEFAULT_MODELS[state.settings.provider];
+  const isXaiGrok = state.settings.provider === "xai" && /grok/i.test(effectiveModel);
   const spiceLabel = ["Gentle", "Suggestive", "Steamy", "Heat-forward", "Very spicy", "Absolute filth"][state.settings.spice - 1] ?? "Moderate";
   const contentModeLabel =
     state.settings.contentMode === "fade_to_black"
@@ -1223,20 +1229,25 @@ export default function Page() {
                   <select
                     value={state.settings.provider}
                     onChange={(e) =>
-                      setState((p) => ({
-                        ...p,
-                        settings: {
-                          ...p.settings,
-                          provider: e.target.value as Provider,
-                          contentMode:
-                            e.target.value === "xai" && /grok/i.test(p.settings.model)
-                              ? p.settings.contentMode
-                              : p.settings.contentMode === "absolute_filth"
-                                ? "spicy"
-                                : p.settings.contentMode,
-                          spice: e.target.value === "xai" ? p.settings.spice : Math.min(p.settings.spice, 5),
-                        },
-                      }))
+                      setState((p) => {
+                        const nextProvider = e.target.value as Provider;
+                        const nextModel = nextProvider === "xai" ? DEFAULT_MODELS.xai : DEFAULT_MODELS[nextProvider];
+                        return {
+                          ...p,
+                          settings: {
+                            ...p.settings,
+                            provider: nextProvider,
+                            model: nextModel,
+                            contentMode:
+                              nextProvider === "xai"
+                                ? p.settings.contentMode
+                                : p.settings.contentMode === "absolute_filth"
+                                  ? "spicy"
+                                  : p.settings.contentMode,
+                            spice: nextProvider === "xai" ? Math.max(p.settings.spice, 6) : Math.min(p.settings.spice, 5),
+                          },
+                        };
+                      })
                     }
                   >
                     <option value="openai">OpenAI</option>
@@ -1246,26 +1257,9 @@ export default function Page() {
                 </div>
                 <div className="field">
                   <label>Model</label>
-                  <input
-                    value={state.settings.model}
-                    onChange={(e) =>
-                      setState((p) => ({
-                        ...p,
-                        settings: {
-                          ...p.settings,
-                          model: e.target.value,
-                          contentMode:
-                            p.settings.provider === "xai" && /grok/i.test(e.target.value)
-                              ? p.settings.contentMode
-                              : p.settings.contentMode === "absolute_filth"
-                                ? "spicy"
-                                : p.settings.contentMode,
-                        },
-                      }))
-                    }
-                  />
+                  <input value={effectiveModel} readOnly />
                   <div className="small" style={{ marginTop: 6 }}>
-                    Try <code>grok-3-mini</code> for the cheapest xAI option, or a newer Grok if you want more capability. The extra spice tier only appears when xAI + Grok is selected.
+                    Auto-selected for you. xAI defaults to <code>grok-3-mini</code>.
                   </div>
                 </div>
               </div>
@@ -1281,14 +1275,22 @@ export default function Page() {
                   <input value={state.settings.writerName} onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, writerName: e.target.value } }))} />
                 </div>
                 <div className="field">
-                  <label>Spice: {state.settings.spice}/{isXaiGrok ? 6 : 5}</label>
+                  <label>Spice: {Math.min(state.settings.spice, isXaiGrok ? 6 : 5)}/{isXaiGrok ? 6 : 5}</label>
                   <input
                     className="spicy"
                     type="range"
                     min="1"
                     max={isXaiGrok ? 6 : 5}
                     value={Math.min(state.settings.spice, isXaiGrok ? 6 : 5)}
-                    onChange={(e) => setState((p) => ({ ...p, settings: { ...p.settings, spice: Number(e.target.value) } }))}
+                    onChange={(e) =>
+                      setState((p) => ({
+                        ...p,
+                        settings: {
+                          ...p.settings,
+                          spice: Number(e.target.value),
+                        },
+                      }))
+                    }
                   />
                   <div className="small" style={{ marginTop: 6 }}>
                     The 6th tier is exactly what it sounds like and is xAI-only. It will not appear for OpenAI or Anthropic.
